@@ -46,25 +46,58 @@ const db = {
           });
           return { lastInsertRowid: id };
         }
-        // Handle UPDATE statements
+        // Handle UPDATE statements for events
         if (sql.includes('UPDATE events')) {
-          if (sql.includes('SET status')) {
+          // Parse the SQL to determine what fields are being updated
+          const whereMatch = sql.match(/WHERE id = \? AND user_id = \?/);
+          
+          if (whereMatch) {
+            // Dynamic update with multiple fields
+            const setClause = sql.match(/SET (.+?) WHERE/)[1];
+            const fields = setClause.split(',').map(f => f.trim().split('=')[0].trim());
+            
+            // Get id and userId from the end of params array
+            const userId = params[params.length - 1];
+            const id = params[params.length - 2];
+            
+            const event = events.find(e => e.id == id && e.user_id == userId);
+            if (event) {
+              // Update each field
+              fields.forEach((field, index) => {
+                if (params[index] !== undefined) {
+                  event[field] = params[index];
+                }
+              });
+              return { changes: 1 };
+            }
+            return { changes: 0 };
+          }
+          
+          // Simple status update
+          if (sql.includes('SET status') && sql.includes('WHERE id = ?')) {
             const status = params[0];
             const id = params[1];
-            const event = events.find(e => e.id === id);
-            if (event) event.status = status;
+            const event = events.find(e => e.id == id);
+            if (event) {
+              event.status = status;
+              return { changes: 1 };
+            }
           }
+          
+          // Swap operation update
           if (sql.includes('SET user_id')) {
             const userId = params[0];
             const status = params[1];
             const id = params[2];
-            const event = events.find(e => e.id === id);
+            const event = events.find(e => e.id == id);
             if (event) {
               event.user_id = userId;
               event.status = status;
+              return { changes: 1 };
             }
           }
-          return { changes: 1 };
+          
+          return { changes: 0 };
         }
         if (sql.includes('UPDATE swap_requests')) {
           const status = params[0];
