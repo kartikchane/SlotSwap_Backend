@@ -112,9 +112,12 @@ const db = {
         // Handle DELETE statements
         if (sql.includes('DELETE FROM events')) {
           const id = params[0];
-          const index = events.findIndex(e => e.id === id);
-          if (index !== -1) events.splice(index, 1);
-          return { changes: 1 };
+          const index = events.findIndex(e => e.id == id); // Use == for type coercion
+          if (index !== -1) {
+            events.splice(index, 1);
+            return { changes: 1 };
+          }
+          return { changes: 0 };
         }
         return { changes: 0 };
       },
@@ -124,32 +127,32 @@ const db = {
           return users.find(u => u.email === params[0]);
         }
         if (sql.includes('SELECT * FROM users WHERE id')) {
-          return users.find(u => u.id === params[0]);
+          return users.find(u => u.id == params[0]); // Use == for type coercion
         }
         // Handle SELECT for events
         if (sql.includes('SELECT * FROM events WHERE id')) {
           if (sql.includes('AND user_id')) {
-            return events.find(e => e.id === params[0] && e.user_id === params[1]);
+            return events.find(e => e.id == params[0] && e.user_id == params[1]); // Use == for type coercion
           }
-          return events.find(e => e.id === params[0]);
+          return events.find(e => e.id == params[0]); // Use == for type coercion
         }
         // Handle SELECT for swap_requests
         if (sql.includes('SELECT * FROM swap_requests WHERE id')) {
-          return swapRequests.find(r => r.id === params[0]);
+          return swapRequests.find(r => r.id == params[0]); // Use == for type coercion
         }
         return null;
       },
       all: (...params) => {
         // Handle SELECT for events
         if (sql.includes('FROM events') && sql.includes('WHERE user_id')) {
-          return events.filter(e => e.user_id === params[0]);
+          return events.filter(e => e.user_id == params[0]); // Use == for type coercion
         }
         // Handle SELECT for swappable slots
         if (sql.includes('FROM events e') && sql.includes('JOIN users u')) {
           return events
-            .filter(e => e.status === 'SWAPPABLE' && e.user_id !== params[0])
+            .filter(e => e.status === 'SWAPPABLE' && e.user_id != params[0]) // Use != for type coercion
             .map(e => {
-              const user = users.find(u => u.id === e.user_id);
+              const user = users.find(u => u.id == e.user_id); // Use == for type coercion
               return { ...e, owner_name: user?.name, owner_email: user?.email };
             });
         }
